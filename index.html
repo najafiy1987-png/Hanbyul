@@ -7,43 +7,57 @@
 <style>
   :root {
     --bg: #F1E9DD; --surface: #FFFFFF; --text: #3D2E22; --text-muted: #7C6A58;
-    --accent: #3D4A38; --accent-light: #A9B79C; --border: #E3D8C8;
+    --accent: #3D4A38; --accent-light: #A9B79C; --border: #E3D8C8; --error: #B3261E;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
-      --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+      --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D; --error: #F2B8B5;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
-    --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+    --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D; --error: #F2B8B5;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html, body { min-height: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: Vazirmatn, Tahoma, 'Segoe UI', sans-serif;
     padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
-    display: flex; align-items: center; justify-content: center; min-height: 100%;
+    display: flex; align-items: center; justify-content: center;
   }
   .card {
-    max-width: 640px; width: 92%; margin: 24px auto; background: var(--surface);
+    max-width: 560px; width: 92%; margin: 24px auto; background: var(--surface);
     border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
   }
   h1 { font-size: 20px; margin: 0 0 6px; text-align: center; }
   .sub { color: var(--text-muted); font-size: 14px; text-align: center; margin: 0 0 20px; }
-  .video-wrap { position: relative; width: min(100%, 380px); aspect-ratio: 9/16; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
-  .video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* ویدیوی عمودی (موبایل) ۹:۱۶ */
+  .video-wrap {
+    position: relative; width: min(100%, 380px); aspect-ratio: 9/16; margin: 0 auto;
+    border-radius: 12px; overflow: hidden; background: #000;
+  }
+  .video-wrap > div {
+    position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+    padding: 0 !important; margin: 0 !important;
+  }
+  .video-wrap iframe {
+    position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+    border: 0 !important; display: block;
+  }
+  .fallback { text-align: center; margin: 12px 0 0; font-size: 13px; }
+  .fallback a { color: var(--accent); cursor: pointer; text-decoration: underline; }
   .status { margin-top: 16px; text-align: center; font-size: 14px; color: var(--text-muted); min-height: 20px; }
   .status.done { color: var(--accent); font-weight: 600; }
+  .status.error { color: var(--error); font-weight: 600; }
   button#continueBtn {
     display: block; width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
     font-size: 16px; font-weight: 600; cursor: not-allowed; background: var(--border); color: var(--text-muted);
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s, color 0.2s; font-family: inherit;
   }
   button#continueBtn.enabled { background: var(--accent); color: var(--surface); cursor: pointer; }
   .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; }
@@ -53,73 +67,163 @@
 <div class="card">
   <h1>معرفی برند «هان‌بیول» (HANBYUL)</h1>
   <p class="sub">لطفاً پیش از ادامه، ویدیوی زیر را تا پایان مشاهده کنید.</p>
-  <div class="video-wrap">
-    <div id="player"></div>
-  </div>
+  <div class="video-wrap" id="videoWrap"><div id="53980558140"><script type="text/JavaScript" src="https://www.aparat.com/embed/hzp0ur4?data[rnddiv]=53980558140&data[responsive]=yes"></script></div></div>
+  <p class="fallback" id="fallbackBox">
+    مشکل در پخش؟ <a id="fallbackLink" role="button" tabindex="0">از یوتیوب تماشا کنید</a>
+  </p>
   <p class="status" id="status">در حال بارگذاری ویدیو...</p>
   <button id="continueBtn" disabled>ادامه به پرسشنامه</button>
-  <p class="note">دکمه «ادامه» تا پایان کامل ویدیو غیرفعال است. این صفحه مخصوص یک گروه آزمایشی است؛ آدرس آن را با بقیه شرکت‌کنندگان به اشتراک نگذارید.</p>
+  <p class="note">دکمه «ادامه» تا پایان ویدیو غیرفعال است. لطفاً آدرس این صفحه را با دیگران به اشتراک نگذارید.</p>
 </div>
 
 <script>
-  // ===== تنظیمات — پیش از انتشار این مقادیر را جایگزین کنید =====
+  // ===== تنظیمات =====
   const CONFIG = {
+    aparatHash: "hzp0ur4",
     youtubeVideoId: "twlGeLG7nrQ",
+    videoDurationSec: 12,   // مدت ویدیو (ثانیه)
+    bufferSec: 3,           // زمان اضافه برای بارگذاری و شروع پخش در آپارات
     formLinks: {
       group1: "https://forms.gle/wD53hUuNjM9Ztspt7",
       group2: "https://forms.gle/cjE85hSrsE6uuBJFA",
       control: "https://forms.gle/W3DRiijS6EBT8ZHU9"
     }
   };
-  // ================================================================
+  // =====================
+
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('continueBtn');
+  const wrap = document.getElementById('videoWrap');
+  const fallbackBox = document.getElementById('fallbackBox');
+  const fallbackLink = document.getElementById('fallbackLink');
 
   function getGroup() {
     const hash = (location.hash || "").replace("#", "");
-    if (["group1", "group2", "control"].includes(hash)) return hash;
-    return null;
+    return ["group1", "group2", "control"].includes(hash) ? hash : null;
   }
-
   const group = getGroup();
-  const statusEl = document.getElementById('status');
-  const btn = document.getElementById('continueBtn');
+  let timerId = null;
 
-  if (!group) {
-    statusEl.textContent = "خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1)";
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = 'status' + (cls ? ' ' + cls : '');
   }
 
-  let tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  let firstScriptTag = document.getElementsByTagName('script')[0];
-  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  function lockButton() {
+    btn.disabled = true;
+    btn.classList.remove('enabled');
+  }
 
-  let player;
-  window.onYouTubeIframeAPIReady = function () {
-    player = new YT.Player('player', {
-      videoId: CONFIG.youtubeVideoId,
-      playerVars: { rel: 0, modestbranding: 1 },
-      events: {
-        onReady: () => { statusEl.textContent = "در حال مشاهده ویدیو..."; },
-        onStateChange: onPlayerStateChange
-      }
-    });
-  };
+  function unlock() {
+    setStatus("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.", "done");
+    btn.disabled = false;
+    btn.classList.add('enabled');
+  }
 
-  function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED) {
-      statusEl.textContent = "✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.";
-      statusEl.classList.add('done');
-      btn.disabled = false;
-      btn.classList.add('enabled');
+  // ---------- پخش‌کننده اصلی: آپارات ----------
+  // آپارات رویداد «پایان ویدیو» در اختیار صفحه نمی‌گذارد؛ پس دکمه پس از
+  // گذشت مدت ویدیو (+ زمان اطمینان) از لحظه بارگذاری پلیر فعال می‌شود.
+  function startAparat() {
+    lockButton();
+    setStatus("در حال بارگذاری ویدیو...");
+    let started = false;
+    function begin(iframe) {
+      if (started) return;
+      started = true;
+      observer.disconnect();
+      clearTimeout(giveUp);
+      setStatus("لطفاً ویدیو را پخش کنید و تا پایان تماشا کنید.");
+      iframe.addEventListener('load', startCountdown, { once: true });
+      // اگر رویداد load پیش‌تر رخ داده بود، شمارش را با تأخیر کوتاه شروع کن
+      setTimeout(function () { if (!timerId) startCountdown(); }, 2500);
     }
+    const observer = new MutationObserver(function () {
+      const f = wrap.querySelector('iframe');
+      if (f) begin(f);
+    });
+    observer.observe(wrap, { childList: true, subtree: true });
+    const existing = wrap.querySelector('iframe');
+    if (existing) begin(existing);
+    // اگر آپارات بارگذاری نشد، کاربر را به یوتیوب هدایت کن
+    const giveUp = setTimeout(function () {
+      if (!started) {
+        observer.disconnect();
+        setStatus("ویدیوی آپارات بارگذاری نشد. لطفاً از لینک «یوتیوب» زیر ویدیو استفاده کنید.", "error");
+      }
+    }, 10000);
   }
 
-  btn.addEventListener('click', () => {
+  function startCountdown() {
+    clearInterval(timerId);
+    let remaining = CONFIG.videoDurationSec + CONFIG.bufferSec;
+    setStatus("لطفاً ویدیو را تا پایان ببینید. دکمه ادامه تا " + remaining + " ثانیه دیگر فعال می‌شود.");
+    timerId = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(timerId);
+        unlock();
+      } else {
+        setStatus("لطفاً ویدیو را تا پایان ببینید. دکمه ادامه تا " + remaining + " ثانیه دیگر فعال می‌شود.");
+      }
+    }, 1000);
+  }
+
+  // ---------- جایگزین: یوتیوب (با تشخیص واقعی پایان ویدیو) ----------
+  let ytPlayer = null;
+
+  function switchToYouTube() {
+    clearInterval(timerId);
+    lockButton();
+    fallbackBox.style.display = 'none';
+    wrap.innerHTML = '<div id="ytPlayer"></div>';
+    setStatus("در حال بارگذاری یوتیوب...");
+
+    function createPlayer() {
+      ytPlayer = new YT.Player('ytPlayer', {
+        videoId: CONFIG.youtubeVideoId,
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+        events: {
+          onReady: function () { setStatus("در حال مشاهده ویدیو..."); },
+          onStateChange: function (e) { if (e.data === YT.PlayerState.ENDED) unlock(); }
+        }
+      });
+    }
+
+    if (window.YT && window.YT.Player) { createPlayer(); return; }
+
+    window.onYouTubeIframeAPIReady = createPlayer;
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    tag.onerror = function () {
+      // یوتیوب در دسترس نیست: بازگشت به آپارات با بارگذاری مجدد صفحه
+      setStatus("یوتیوب در دسترس نیست؛ صفحه دوباره بارگذاری می‌شود و ویدیوی آپارات نمایش داده می‌شود.", "error");
+      setTimeout(function () { location.reload(); }, 2500);
+    };
+    document.head.appendChild(tag);
+  }
+
+  fallbackLink.addEventListener('click', switchToYouTube);
+  fallbackLink.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchToYouTube(); }
+  });
+
+  // ---------- شروع ----------
+  if (!group) {
+    setStatus("خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1). لطفاً از لینک اختصاصی خود استفاده کنید.", "error");
+    fallbackBox.style.display = 'none';
+    wrap.style.display = 'none';
+  } else {
+    startAparat();
+  }
+
+  btn.addEventListener('click', function () {
     if (btn.disabled || !group) return;
-    try {
-      localStorage.setItem('hanbyul_video_watched_' + group, '1');
-    } catch (e) {}
+    try { localStorage.setItem('hanbyul_video_watched_' + group, '1'); } catch (e) {}
     window.location.href = CONFIG.formLinks[group];
   });
+
+  // اگر کاربر آدرس را با #group دیگری عوض کرد، صفحه دوباره بارگذاری شود
+  window.addEventListener('hashchange', function () { location.reload(); });
 </script>
 </body>
 </html>
