@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>معرفی برند هان‌بیول</title>
+<style>
+  :root {
+    --bg: #F1E9DD; --surface: #FFFFFF; --text: #3D2E22; --text-muted: #7C6A58;
+    --accent: #3D4A38; --accent-light: #A9B79C; --border: #E3D8C8;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
+      --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
+    --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: Vazirmatn, Tahoma, 'Segoe UI', sans-serif;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex; align-items: center; justify-content: center; min-height: 100%;
+  }
+  .card {
+    max-width: 640px; width: 92%; margin: 24px auto; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 6px; text-align: center; }
+  .sub { color: var(--text-muted); font-size: 14px; text-align: center; margin: 0 0 20px; }
+  .video-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #000; }
+  .video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .status { margin-top: 16px; text-align: center; font-size: 14px; color: var(--text-muted); min-height: 20px; }
+  .status.done { color: var(--accent); font-weight: 600; }
+  button#continueBtn {
+    display: block; width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; cursor: not-allowed; background: var(--border); color: var(--text-muted);
+    transition: background 0.2s, color 0.2s;
+  }
+  button#continueBtn.enabled { background: var(--accent); color: var(--surface); cursor: pointer; }
+  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>معرفی برند «هان‌بیول» (HANBYUL)</h1>
+  <p class="sub">لطفاً پیش از ادامه، ویدیوی زیر را تا پایان مشاهده کنید.</p>
+  <div class="video-wrap">
+    <div id="player"></div>
+  </div>
+  <p class="status" id="status">در حال بارگذاری ویدیو...</p>
+  <button id="continueBtn" disabled>ادامه به پرسشنامه</button>
+  <p class="note">دکمه «ادامه» تا پایان کامل ویدیو غیرفعال است. این صفحه مخصوص یک گروه آزمایشی است؛ آدرس آن را با بقیه شرکت‌کنندگان به اشتراک نگذارید.</p>
+</div>
+
+<script>
+  // ===== تنظیمات — پیش از انتشار این مقادیر را جایگزین کنید =====
+  const CONFIG = {
+    youtubeVideoId: "twlGeLG7nrQ",
+    formLinks: {
+      group1: "https://forms.gle/wD53hUuNjM9Ztspt7",
+      group2: "https://forms.gle/cjE85hSrsE6uuBJFA",
+      control: "https://forms.gle/W3DRiijS6EBT8ZHU9"
+    }
+  };
+  // ================================================================
+
+  function getGroup() {
+    const hash = (location.hash || "").replace("#", "");
+    if (["group1", "group2", "control"].includes(hash)) return hash;
+    return null;
+  }
+
+  const group = getGroup();
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('continueBtn');
+
+  if (!group) {
+    statusEl.textContent = "خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1)";
+  }
+
+  let tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  let firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+  let player;
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('player', {
+      videoId: CONFIG.youtubeVideoId,
+      playerVars: { rel: 0, modestbranding: 1 },
+      events: {
+        onReady: () => { statusEl.textContent = "در حال مشاهده ویدیو..."; },
+        onStateChange: onPlayerStateChange
+      }
+    });
+  };
+
+  function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED) {
+      statusEl.textContent = "✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.";
+      statusEl.classList.add('done');
+      btn.disabled = false;
+      btn.classList.add('enabled');
+    }
+  }
+
+  btn.addEventListener('click', () => {
+    if (btn.disabled || !group) return;
+    try {
+      localStorage.setItem('hanbyul_video_watched_' + group, '1');
+    } catch (e) {}
+    window.location.href = CONFIG.formLinks[group];
+  });
+</script>
+</body>
+</html>
