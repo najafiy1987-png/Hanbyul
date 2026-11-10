@@ -36,8 +36,9 @@
   }
   h1 { font-size: 20px; margin: 0 0 6px; text-align: center; }
   .sub { color: var(--text-muted); font-size: 14px; text-align: center; margin: 0 0 20px; }
-  .video-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #000; }
-  .video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .video-wrap { position: relative; width: min(100%, 380px); aspect-ratio: 9/16; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
+  .video-wrap > div { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
+  .video-wrap iframe { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: 0 !important; display: block; }
   .status { margin-top: 16px; text-align: center; font-size: 14px; color: var(--text-muted); min-height: 20px; }
   .status.done { color: var(--accent); font-weight: 600; }
   button#continueBtn {
@@ -63,7 +64,7 @@
   </div>
 
   <div class="video-wrap" id="aparatWrap">
-    <div id="53980558140"></div>
+    <div id="93980432822"><script type="text/JavaScript" src="https://www.aparat.com/embed/wtk17gi?data[rnddiv]=93980432822&data[responsive]=yes"></script></div>
   </div>
   <div class="video-wrap" id="youtubeWrap" style="display:none;">
     <div id="player"></div>
@@ -72,12 +73,13 @@
   <p class="status" id="status">در حال بارگذاری ویدیو...</p>
   <button id="continueBtn" disabled>ادامه به پرسشنامه</button>
   <p class="note">لطفاً ویدیو را با دقت و تا پایان تماشا کنید. پس از آن دکمه «ادامه» فعال می‌شود و می‌توانید به پرسشنامه بروید. از همکاری شما سپاسگزاریم.</p>
+</div>
 
 <script>
   // ===== تنظیمات =====
   const CONFIG = {
     aparatEmbedHash: "wtk17gi",
-    aparatDurationSeconds: 15, // ⚠️ این مقدار را با طول واقعی ویدیو تأیید/اصلاح کنید
+    aparatDurationSeconds: 13, // طول ویدیو (۱۰ ثانیه) + ۳ ثانیه اطمینان؛ اگر طول ویدیو عوض شد اصلاح کنید
     youtubeVideoId: "twlGeLG7nrQ",
     formLinks: {
       group1: "https://forms.gle/wD53hUuNjM9Ztspt7",
@@ -121,20 +123,27 @@
     btn.classList.remove('enabled');
   }
 
-  function loadAparat() {
-    const container = document.getElementById('93980432822');
-    container.innerHTML = '';
-    const s = document.createElement('script');
-    s.type = 'text/JavaScript';
-    s.src = "https://www.aparat.com/embed/" + CONFIG.aparatEmbedHash + "?data[rnddiv]= 93980432822&data[responsive]=yes";
-    container.appendChild(s);
-    if (aparatUnlocked) { markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید."); return; }
-    markLocked("در حال مشاهده ویدیو (آپارات)... لطفاً تا پایان صبر کنید.");
-    if (aparatTimer) clearTimeout(aparatTimer);
+  // کد آپارات به‌صورت ثابت در HTML قرار دارد؛ اینجا فقط شمارش زمان را شروع می‌کنیم.
+  let aparatTimerStarted = false;
+  function startAparatTimer() {
+    if (aparatTimerStarted) return;
+    aparatTimerStarted = true;
     aparatTimer = setTimeout(() => {
       aparatUnlocked = true;
       if (provider === 'aparat') markUnlocked("✓ زمان مشاهده ویدیو سپری شد. اکنون می‌توانید ادامه دهید.");
     }, CONFIG.aparatDurationSeconds * 1000);
+  }
+
+  function loadAparat() {
+    if (aparatUnlocked) { markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید."); return; }
+    markLocked("در حال مشاهده ویدیو (آپارات)... لطفاً تا پایان صبر کنید.");
+    // شمارش را وقتی شروع کن که پلیر آپارات در صفحه ظاهر شد (حداکثر ۶ ثانیه صبر)
+    const wrap = document.getElementById('aparatWrap');
+    const begin = () => { observer.disconnect(); clearTimeout(fallback); startAparatTimer(); };
+    const observer = new MutationObserver(() => { if (wrap.querySelector('iframe')) begin(); });
+    observer.observe(wrap, { childList: true, subtree: true });
+    const fallback = setTimeout(begin, 6000);
+    if (wrap.querySelector('iframe')) begin();
   }
 
   function loadYoutubeApiOnce() {
