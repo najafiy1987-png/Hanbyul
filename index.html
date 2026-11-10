@@ -7,28 +7,29 @@
 <style>
   :root {
     --bg: #F1E9DD; --surface: #FFFFFF; --text: #3D2E22; --text-muted: #7C6A58;
-    --accent: #3D4A38; --accent-light: #A9B79C; --border: #E3D8C8;
+    --accent: #3D4A38; --border: #E3D8C8; --error: #B3261E;
+    --video-aspect: 16 / 9;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
-      --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+      --accent: #A9B79C; --border: #3D362D; --error: #F2B8B5;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #1E1B17; --surface: #2A2520; --text: #F1E9DD; --text-muted: #B8AA98;
-    --accent: #A9B79C; --accent-light: #6B7A62; --border: #3D362D;
+    --accent: #A9B79C; --border: #3D362D; --error: #F2B8B5;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html, body { min-height: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: Vazirmatn, Tahoma, 'Segoe UI', sans-serif;
     padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
-    display: flex; align-items: center; justify-content: center; min-height: 100%;
+    display: flex; align-items: center; justify-content: center;
   }
   .card {
     max-width: 640px; width: 92%; margin: 24px auto; background: var(--surface);
@@ -36,20 +37,38 @@
   }
   h1 { font-size: 20px; margin: 0 0 6px; text-align: center; }
   .sub { color: var(--text-muted); font-size: 14px; text-align: center; margin: 0 0 20px; }
-  .video-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #000; }
-  .video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-  .status { margin-top: 16px; text-align: center; font-size: 14px; color: var(--text-muted); min-height: 20px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tabBtn {
+    flex: 1; padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-muted); font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .tabBtn.active { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+
+  /* کادر ویدیو: پیش‌فرض افقی ۱۶:۹ (اندازه قبلی) */
+  .video-wrap {
+    position: relative; width: 100%; aspect-ratio: var(--video-aspect);
+    border-radius: 12px; overflow: hidden; background: #000;
+  }
+  .video-wrap.vertical { width: min(100%, 380px); margin: 0 auto; }
+  /* هر عنصری که آپارات یا یوتیوب بسازند، دقیقاً کل کادر را پر کند */
+  .video-wrap div, .video-wrap iframe {
+    position: absolute !important; inset: 0 !important;
+    width: 100% !important; height: 100% !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; max-width: none !important;
+  }
+  .video-wrap iframe { display: block; }
+
+  .status { margin-top: 16px; text-align: center; font-size: 14px; color: var(--text-muted); min-height: 20px; line-height: 1.8; }
   .status.done { color: var(--accent); font-weight: 600; }
+  .status.error { color: var(--error); font-weight: 600; }
   button#continueBtn {
     display: block; width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
     font-size: 16px; font-weight: 600; cursor: not-allowed; background: var(--border); color: var(--text-muted);
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s, color 0.2s; font-family: inherit;
   }
   button#continueBtn.enabled { background: var(--accent); color: var(--surface); cursor: pointer; }
-  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-  .tabBtn { flex: 1; padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); font-size: 13px; cursor: pointer; }
-  .tabBtn.active { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.8; }
 </style>
 </head>
 <body>
@@ -57,144 +76,167 @@
   <h1>معرفی برند «هان‌بیول» (HANBYUL)</h1>
   <p class="sub">لطفاً پیش از ادامه، ویدیوی زیر را تا پایان مشاهده کنید.</p>
 
-  <div class="tabs">
-    <button class="tabBtn active" id="tabAparat" onclick="switchProvider('aparat')">پخش از آپارات (پیشنهادی)</button>
-    <button class="tabBtn" id="tabYoutube" onclick="switchProvider('youtube')">تماشا در یوتیوب (جایگزین)</button>
+  <div class="tabs" id="tabs">
+    <button class="tabBtn active" id="tabAparat" type="button" onclick="switchProvider('aparat')">پخش از آپارات (پیشنهادی)</button>
+    <button class="tabBtn" id="tabYoutube" type="button" onclick="switchProvider('youtube')">تماشا در یوتیوب (جایگزین)</button>
   </div>
 
-  <div class="video-wrap" id="aparatWrap">
-    <div id="93980432822"><script type="text/JavaScript" src="https://www.aparat.com/embed/wtk17gi?data[rnddiv]=93980432822&data[responsive]=yes"></script></div>
-  </div>
-  <div class="video-wrap" id="youtubeWrap" style="display:none;">
-    <div id="player"></div>
-  </div>
+  <!-- کد رسمی آپارات (بدون تغییر) -->
+  <div class="video-wrap" id="aparatWrap"><div id="93980432822"><script type="text/JavaScript" src="https://www.aparat.com/embed/wtk17gi?data[rnddiv]=93980432822&data[responsive]=yes"></script></div></div>
+
+  <div class="video-wrap" id="youtubeWrap" style="display:none;"><div id="player"></div></div>
 
   <p class="status" id="status">در حال بارگذاری ویدیو...</p>
-  <button id="continueBtn" disabled>ادامه به پرسشنامه</button>
+  <button id="continueBtn" type="button" disabled>ادامه به پرسشنامه</button>
   <p class="note">لطفاً ویدیو را با دقت و تا پایان تماشا کنید. پس از آن دکمه «ادامه» فعال می‌شود و می‌توانید به پرسشنامه بروید. از همکاری شما سپاسگزاریم.</p>
 </div>
 
 <script>
   // ===== تنظیمات =====
   const CONFIG = {
-    aparatEmbedHash: "wtk17gi",
-    aparatDurationSeconds: 13, // طول ویدیو (۱۰ ثانیه) + ۳ ثانیه اطمینان؛ اگر طول ویدیو عوض شد اصلاح کنید
+    aparatDurationSeconds: 16,   // طول ویدیو در آپارات ۱۳ ثانیه + ۳ ثانیه اطمینان
     youtubeVideoId: "twlGeLG7nrQ",
+    verticalVideo: false,        // اگر ویدیو عمودی (۹:۱۶) است، true بگذارید
     formLinks: {
       group1: "https://forms.gle/wD53hUuNjM9Ztspt7",
       group2: "https://forms.gle/cjE85hSrsE6uuBJFA",
       control: "https://forms.gle/W3DRiijS6EBT8ZHU9"
     }
   };
-  // ================================================================
+  // =====================
+
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('continueBtn');
+  const aparatWrap = document.getElementById('aparatWrap');
+  const youtubeWrap = document.getElementById('youtubeWrap');
+
+  // قالب کادر ویدیو
+  if (CONFIG.verticalVideo) {
+    document.documentElement.style.setProperty('--video-aspect', '9 / 16');
+    aparatWrap.classList.add('vertical');
+    youtubeWrap.classList.add('vertical');
+  }
 
   function getGroup() {
     const hash = (location.hash || "").replace("#", "");
-    if (["group1", "group2", "control"].includes(hash)) return hash;
-    return null;
+    return ["group1", "group2", "control"].includes(hash) ? hash : null;
   }
-
   const group = getGroup();
-  const statusEl = document.getElementById('status');
-  const btn = document.getElementById('continueBtn');
-
-  if (!group) {
-    statusEl.textContent = "خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1)";
-  }
 
   let provider = 'aparat';
   let ytPlayer = null;
-  let ytReady = false;
-  let aparatTimer = null;
+  let ytStarted = false;
   let aparatUnlocked = false;
   let youtubeUnlocked = false;
+  let aparatTimerStarted = false;
 
-  function markUnlocked(msg) {
+  function setStatus(msg, cls) {
     statusEl.textContent = msg;
-    statusEl.classList.add('done');
-    btn.disabled = false;
-    btn.classList.add('enabled');
+    statusEl.className = 'status' + (cls ? ' ' + cls : '');
   }
-  function markLocked(msg) {
-    statusEl.textContent = msg;
-    statusEl.classList.remove('done');
+  function lock(msg) {
+    setStatus(msg);
     btn.disabled = true;
     btn.classList.remove('enabled');
   }
+  function unlock(msg) {
+    setStatus(msg, 'done');
+    btn.disabled = false;
+    btn.classList.add('enabled');
+  }
+  const DONE_MSG = "✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.";
 
-  // کد آپارات به‌صورت ثابت در HTML قرار دارد؛ اینجا فقط شمارش زمان را شروع می‌کنیم.
-  let aparatTimerStarted = false;
+  // ---------- آپارات ----------
+  // آپارات رویداد «پایان ویدیو» را به صفحه نمی‌دهد؛ دکمه پس از مدت ویدیو (+ زمان اطمینان) فعال می‌شود.
   function startAparatTimer() {
     if (aparatTimerStarted) return;
     aparatTimerStarted = true;
-    aparatTimer = setTimeout(() => {
+    setTimeout(function () {
       aparatUnlocked = true;
-      if (provider === 'aparat') markUnlocked("✓ زمان مشاهده ویدیو سپری شد. اکنون می‌توانید ادامه دهید.");
+      if (provider === 'aparat') unlock(DONE_MSG);
     }, CONFIG.aparatDurationSeconds * 1000);
   }
 
-  function loadAparat() {
-    if (aparatUnlocked) { markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید."); return; }
-    markLocked("در حال مشاهده ویدیو (آپارات)... لطفاً تا پایان صبر کنید.");
-    // شمارش را وقتی شروع کن که پلیر آپارات در صفحه ظاهر شد (حداکثر ۶ ثانیه صبر)
-    const wrap = document.getElementById('aparatWrap');
-    const begin = () => { observer.disconnect(); clearTimeout(fallback); startAparatTimer(); };
-    const observer = new MutationObserver(() => { if (wrap.querySelector('iframe')) begin(); });
-    observer.observe(wrap, { childList: true, subtree: true });
-    const fallback = setTimeout(begin, 6000);
-    if (wrap.querySelector('iframe')) begin();
+  function watchAparat() {
+    if (aparatUnlocked) { unlock(DONE_MSG); return; }
+    lock("لطفاً ویدیو را پخش کنید و تا پایان تماشا کنید.");
+    const begin = function () { observer.disconnect(); clearTimeout(fallback); startAparatTimer(); };
+    const observer = new MutationObserver(function () { if (aparatWrap.querySelector('iframe')) begin(); });
+    observer.observe(aparatWrap, { childList: true, subtree: true });
+    const fallback = setTimeout(begin, 6000);   // اگر پلیر دیر آمد، باز هم شمارش شروع شود
+    if (aparatWrap.querySelector('iframe')) begin();
   }
 
-  function loadYoutubeApiOnce() {
-    if (ytReady) return;
-    ytReady = true;
-    let tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    let firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    window.onYouTubeIframeAPIReady = function () {
+  function stopAparat() {
+    // جلوگیری از ادامه پخش صدا هنگام رفتن به تب یوتیوب
+    const f = aparatWrap.querySelector('iframe');
+    if (f) { try { f.src = f.src; } catch (e) {} }
+  }
+
+  // ---------- یوتیوب (تشخیص واقعی پایان ویدیو) ----------
+  function startYouTube() {
+    if (ytStarted) { return; }
+    ytStarted = true;
+    function create() {
       ytPlayer = new YT.Player('player', {
         videoId: CONFIG.youtubeVideoId,
-        playerVars: { rel: 0, modestbranding: 1 },
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { if (provider === 'youtube' && !youtubeUnlocked) markLocked("در حال مشاهده ویدیو (یوتیوب)..."); },
-          onStateChange: (event) => {
-            if (event.data === YT.PlayerState.ENDED) {
+          onReady: function () { if (provider === 'youtube' && !youtubeUnlocked) lock("لطفاً ویدیو را تا پایان تماشا کنید."); },
+          onStateChange: function (e) {
+            if (e.data === YT.PlayerState.ENDED) {
               youtubeUnlocked = true;
-              if (provider === 'youtube') markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.");
+              if (provider === 'youtube') unlock(DONE_MSG);
             }
           }
         }
       });
+    }
+    if (window.YT && window.YT.Player) { create(); return; }
+    window.onYouTubeIframeAPIReady = create;
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    tag.onerror = function () {
+      ytStarted = false;
+      setStatus("یوتیوب در دسترس نیست. لطفاً به تب «آپارات» برگردید.", "error");
     };
+    document.head.appendChild(tag);
   }
 
   function switchProvider(p) {
+    if (!group || p === provider) return;
     provider = p;
     document.getElementById('tabAparat').classList.toggle('active', p === 'aparat');
     document.getElementById('tabYoutube').classList.toggle('active', p === 'youtube');
-    document.getElementById('aparatWrap').style.display = (p === 'aparat') ? 'block' : 'none';
-    document.getElementById('youtubeWrap').style.display = (p === 'youtube') ? 'block' : 'none';
+    aparatWrap.style.display = (p === 'aparat') ? 'block' : 'none';
+    youtubeWrap.style.display = (p === 'youtube') ? 'block' : 'none';
+
     if (p === 'aparat') {
-      if (aparatUnlocked) markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.");
-      else loadAparat();
+      try { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
+      if (aparatUnlocked) unlock(DONE_MSG); else lock("لطفاً ویدیو را پخش کنید و تا پایان تماشا کنید.");
     } else {
-      loadYoutubeApiOnce();
-      if (youtubeUnlocked) markUnlocked("✓ ویدیو مشاهده شد. اکنون می‌توانید ادامه دهید.");
-      else markLocked("در حال بارگذاری یوتیوب...");
+      stopAparat();
+      if (youtubeUnlocked) { unlock(DONE_MSG); startYouTube(); }
+      else { lock("در حال بارگذاری یوتیوب..."); startYouTube(); }
     }
   }
 
-  if (group) loadAparat();
-  else statusEl.textContent = "خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1)";
+  // ---------- شروع ----------
+  if (!group) {
+    setStatus("خطا: شناسه گروه در آدرس صفحه مشخص نیست (مثال صحیح: ...#group1). لطفاً از لینک اختصاصی خود استفاده کنید.", "error");
+    document.getElementById('tabs').style.display = 'none';
+    aparatWrap.style.display = 'none';
+  } else {
+    watchAparat();
+  }
 
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', function () {
     if (btn.disabled || !group) return;
-    try {
-      localStorage.setItem('hanbyul_video_watched_' + group, '1');
-    } catch (e) {}
+    try { localStorage.setItem('hanbyul_video_watched_' + group, '1'); } catch (e) {}
     window.location.href = CONFIG.formLinks[group];
   });
+
+  window.addEventListener('hashchange', function () { location.reload(); });
 </script>
 </body>
 </html>
